@@ -5,8 +5,10 @@ toc: false
 ---
 
 ```js
-import {require} from "npm:d3-require";
-const reorder = require("reorder.js@2.2.6");
+// import {require} from "npm:d3-require";
+// const reorder = require("reorder.js@2.2.6");
+import * as reorder from "npm:reorder.js@2.2.6";
+
 ```
 
 ```js
