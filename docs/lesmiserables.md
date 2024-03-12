@@ -5,10 +5,8 @@ toc: false
 ---
 
 ```js
-// import {require} from "npm:d3-require";
-// const reorder = require("reorder.js@2.2.6");
 import * as reorder from "npm:reorder.js@2.2.6";
-
+//import * as reorder from "./lib/reorder.js";
 ```
 
 ```js
@@ -116,29 +114,30 @@ const graph = FileAttachment("./data/miserables_numbers.json").json();
 ```
 
 ```js
-const orderingsOptions = [
-  "none",
-  "name",
-  "count",
-  "group",
-  "leafOrder",
-  "leafOrderDist",
-  "barycenter",
-  "rcm",
-  "spectral"
-]
+const orderingsOptions = ({
+  none: "none",
+  name: "by Name",
+  count: "by Frequency",
+  group: "by Group (cluster)",
+  leafOrder: "by Leaf Order",
+  leafOrderDist: "by Leaf Order over Distance Matrix",
+  barycenter: "by Crossing Reduction",
+  rcm: "by Bandwidth Reduction (RCM)",
+  spectral: "Spectral",
+  nn2opt: "NN-2OPT",
+});
 ```
 
 ```js
 const distanceOptions = ({
   euclidean: "Euclidean (L2)",
   manhattan: "Manhattan (L1)",
-  minkowski: "Minkowski",
   chebyshev: "Chebyshev",
   hamming: "Hamming",
   jaccard: "Jaccard",
-  braycurtis: "Braycurtis"
-})
+  braycurtis: "Braycurtis",
+  morans: "Morans",
+});
 ```
 
 
@@ -154,8 +153,13 @@ let orders = ({ nodes, links }, { distance = "manhattan" }) => {
     .optimal_leaf_order()
     .distance(reorder.distance[distance]);
 
+  const adjacency = reorder.graph2mat(graph);
+  
+  if (distance == 'morans') {
+    leafOrder.distance(reorder.distance[distance](adjacency));
+  }
+
   function computeLeaforder() {
-    const adjacency = reorder.graph2mat(graph);
     return leafOrder(adjacency);
   }
 
@@ -177,6 +181,11 @@ let orders = ({ nodes, links }, { distance = "manhattan" }) => {
     return reorder.spectral_order(graph);
   }
 
+  function computeNN2OPT() {
+    return leafOrder(adjacency);
+
+  }
+
   const orders = {
     none: () => d3.range(n),
     name: () =>
@@ -194,7 +203,8 @@ let orders = ({ nodes, links }, { distance = "manhattan" }) => {
     leafOrderDist: computeLeaforderDist,
     barycenter: computeBarycenter,
     rcm: computeRCM,
-    spectral: computeSpectral
+    spectral: computeSpectral,
+    nn2opt: computeNN2OPT,
   };
 
   return orders;
@@ -292,6 +302,9 @@ function draw(permutation){
   return permutation;
 }
 ```
+```js
+sorting
+```
 
 ```js
 setup();
@@ -306,8 +319,9 @@ current
 ```
 
 ```js
-const sorting = view(Inputs.select(orderingsOptions, {
-  label: "Ordering method"
+const sorting = view(Inputs.select(Object.keys(orderingsOptions), {
+  label: "Ordering method",
+  format: (d) => orderingsOptions[d]
 }));
 ```
 
