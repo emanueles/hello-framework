@@ -6,20 +6,27 @@ toc: false
 
 ```js
 import * as reorder from "npm:reorder.js@2.2.6";
-import * as PIXI from 'https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/+esm'
-```
+import * as PIXI from 'https://cdn.jsdelivr.net/npm/pixi.js@7.4.0/+esm';
+import { Viewport } from 'npm:pixi-viewport';
+
+ ```
 
 # Les Misérables
 
 This adjacency matrix user Reorder.js and PIXI.js.
 
 ```js
-const graph = FileAttachment("./data/miserables_numbers.json").json();
+const json_graph = FileAttachment("./data/miserables_numbers.json").json();
 ```
 
 ```js
-const links = graph.links.map((d) => Object.create(d));
-const nodes = graph.nodes.map((d) => Object.create(d));
+const links = json_graph.links.map((d) => Object.create(d));
+const nodes = json_graph.nodes.map((d) => Object.create(d));
+
+const graph_links = json_graph.links.map((d) => Object.create(d));
+const graph_nodes = json_graph.nodes.map((d) => Object.create(d));
+
+const graph = {nodes: graph_nodes, links: graph_links};
 ```
 
 ```js
@@ -144,8 +151,29 @@ const app = new PIXI.Application({background: '#FFFFFF',
 ```
 
 ```js
+const viewport = new Viewport({
+  screenWidth: width,
+  screenHeight: height,
+  worldWidth: 1500,
+  worldHeight: 1500,
+  passiveWheel: false,
+  events: app.renderer.events 
+});
+
+// add the viewport to the stage
+app.stage.addChild(viewport);
+
+//activate plugins
+viewport
+  .drag()
+  .pinch()
+  .wheel()
+  .decelerate()
+```
+
+```js
 const container = new PIXI.Container();
-app.stage.addChild(container);
+viewport.addChild(container);
 let squares = [];
 ```
 
@@ -169,16 +197,46 @@ function setup() {
 
   const labels = graph.nodes.map((d) => d.name);
 
+
   const matrix = links
     .flatMap(({ source, target, value }) => [
       [source, target, value],
       [target, source, value]
     ])
-    .concat(nodeIds.map(i => [i, i]));    
+    .concat(nodeIds.map(i => [i, i]));   
+  
+  // let matrix = [];
+  
+  // nodes.forEach( (node, i) => {
+  //   node.count = 0;
+  //   node.index = i;
+  //   matrix[i] = d3.range(nodes.length).map(function(j) { return {x: j, y: i, z: 0}; });
+  // });
 
-    let custom = d3.select(customBase);
+  // console.log(nodes);
+  
+  // console.log(links);
+  // links.forEach((link) => {
+  //   matrix[link.source][link.target].z += link.value;
+  //   matrix[link.target][link.source].z += link.value;
+  //   matrix[link.source][link.source].z += link.value;
+  //   matrix[link.target][link.target].z += link.value;
+  //   nodes[link.source].count += link.value;
+  //   nodes[link.target].count += link.value;
 
-    let join = custom.selectAll('custom.rect').data(matrix);
+  // });
+
+  // console.log(matrix);
+
+  // let adjacency = matrix.map(function(row) {
+  //     return row.map(function(c) { return c.z; });
+  // });
+
+  let custom = d3.select(customBase);
+
+  let join = custom.selectAll('custom.rect').data(matrix);
+
+  console.log(nodes[0].group);
     
   let rects = join
     .enter()
@@ -186,13 +244,13 @@ function setup() {
     .attr('class', 'rect')  
     .attr('width', x.bandwidth() - 1)  
     .attr('height', x.bandwidth() - 1)
-    .attr('net_s', ([s, t, v]) => s)
-    .attr('net_t', ([s, t, v]) => t)
-    .attr('color', function ([s, t, v]) {
+    .attr('net_s', ([s,t,v]) => s)
+    .attr('net_t', ([s,t,v]) => t)
+    .attr('color', function ([s,t,v]) {
       const color =  nodes[s].group === nodes[t].group ? d3.color(c(nodes[t].group)) : d3.color("black");
       return color.toString();
       })
-    .attr('alpha', ([, , v]) => z(v)); 
+    .attr('alpha', ([s,t,v]) => z(v)); 
 
     createVisualElements();
     draw(nodeIds);
@@ -213,7 +271,9 @@ function createVisualElements(nodeIds){
     sq.height = node.attr('height');
     sq.eventMode = 'dynamic';
     sq.cursor = 'pointer';
-    sq.on('pointerdown', (event) => { console.log(nodes[node.attr('net_s')].name,nodes[node.attr('net_t')].name); })
+    sq.on('pointerdown', (event) => { 
+      console.log(`${nodes[node.attr('net_s')].name}-${nodes[node.attr('net_t')].name}`);
+      setSelected(`${nodes[node.attr('net_s')].name}-${nodes[node.attr('net_t')].name}`); })
     
     squares.push(sq);
     container.addChild(sq);
@@ -231,10 +291,10 @@ function draw(permutation){
   
   elements.each(function(d,i) { // For each virtual/custom element...
     var node = d3.select(this);
-    //console.log(d,i,node);
+    console.log(d,i,node);
     const sq = squares[i];
-    sq.x = x(d[0])
-    sq.y = x(d[1]) 
+    sq.x = x(d[1])
+    sq.y = x(d[0]) 
   });
 
   return permutation;
@@ -271,12 +331,13 @@ const distance = view(Inputs.select(Object.keys(distanceOptions), {
   value: this?.value || "manhattan"
 }));
 ```
+
 ```js
-const a = d3.range(nodes.length).sort((a, b) => d3.ascending(nodes[a].name, nodes[b].name))
+const selected = Mutable("");
+const setSelected = (value) => selected.value = value;
+const resetSelected = () => selected.value = '';
 ```
-```js
-a.map((i) => nodes[i].name)
-```
+Cell: ${selected}.
 
 <canvas id="matrix">
 </canvas>

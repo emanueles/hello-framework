@@ -33,10 +33,6 @@ const container = new PIXI.ParticleContainer(100000, {
 });
 app.stage.addChild(container);
 
-// Create new textures
-const blutexture = PIXI.Texture.from('./bluesq.png');
-const orangetexture = PIXI.Texture.from('./orangesq.png');
-
 const squares = [];
 
 for (let i=0; i < 1000; i++)
